@@ -1,0 +1,71 @@
+name: Linux binaries / Maven Central
+
+on:
+  workflow_dispatch:
+    inputs:
+      tdlib_git_ref:
+        description: 'TdLib tag/commit'
+        required: true
+        default: 'v1.8.0'
+      deploy_version:
+        description: 'TdLib deploy version (to be used when publishing on Maven Central)'
+        required: true
+        default: 'v1.8.0'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v2
+
+      - name: Checkout TdLib
+        uses: actions/checkout@v2
+        with:
+          repository: tdlib/td
+          ref: ${{ github.event.inputs.tdlib_git_ref }}
+          path: tdrepo
+
+      - name: Run build script
+        run: ${{ github.workspace }}/.github/scripts/ubuntu/td-build.sh
+        shell: sh
+        working-directory: ${{ github.workspace }}/tdrepo
+
+      - name: Archive binary libs
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-bin
+          path: ${{ github.workspace }}/tdrepo/tdlib/bin/*.so
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: temurin
+          server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
+          settings-path: ${{ github.workspace }} # location for the settings.xml file
+
+      - name: Prepare Maven's settings.xml
+        uses: s4u/maven-settings-action@v2.7.0
+        with:
+          override: true
+          servers: '[
+            {"id": "github","configuration": {"httpHeaders": {"property": {"name": "Authorization","value": "Bearer ${{ secrets.GITHUB_TOKEN }}"}}}},
+            { "id": "ossrh", "username": "denisab85", "password": "${{ secrets.OSSRH_TOKEN }}" }
+          ]'
+
+      - name: Deploy the package
+        run: |
+          mkdir -p ./example/java/src/main/java
+          mv ./example/java/org ./example/java/src/main/java/
+          cp ../.github/maven/pom.xml ./example/java/
+          cd ./example/java
+          sed -i 's/${RELEASE_VERSION}/${{ github.event.inputs.deploy_version }}/' pom.xml
+          mvn --no-transfer-progress --batch-mode clean deploy
+        shell: sh
+        working-directory: ${{ github.workspace }}/tdrepo
+        env:
+          SIGN_KEY: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
+          SIGN_KEY_ID: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
+          SIGN_KEY_PASS: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
