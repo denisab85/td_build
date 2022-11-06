@@ -1,4 +1,4 @@
-name: Linux binaries / Maven Central
+name: Linux/Windows binaries + Maven Central
 
 on:
   workflow_dispatch:
@@ -8,12 +8,12 @@ on:
         required: true
         default: 'v1.8.0'
       deploy_version:
-        description: 'TdLib deploy version (to be used when publishing on Maven Central)'
+        description: 'TdLib deploy version (to be used for publishing on Maven Central)'
         required: true
         default: 'v1.8.0'
 
 jobs:
-  build-linux:
+  build-linux-java:
     runs-on: ubuntu-22.04
 
     steps:
@@ -69,3 +69,27 @@ jobs:
           SIGN_KEY: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
           SIGN_KEY_ID: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
           SIGN_KEY_PASS: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v2
+
+      - name: Checkout TdLib
+        uses: actions/checkout@v2
+        with:
+          repository: tdlib/td
+          ref: ${{ github.event.inputs.tdlib_git_ref }}
+          path: tdrepo
+
+      - name: Run build script
+        run: ${{ github.workspace }}/.github/scripts/windows/td-build.ps1
+        shell: pwsh
+        working-directory: ${{ github.workspace }}/tdrepo
+
+      - name: Archive binary libs
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-bin
+          path: ${{ github.workspace }}/tdrepo/tdlib/bin/*.dll
