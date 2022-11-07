@@ -19,5 +19,3 @@ cd build
 cmake -A x64 -DCMAKE_INSTALL_PREFIX:PATH=../../../tdlib -DCMAKE_TOOLCHAIN_FILE:FILEPATH=../../../vcpkg/scripts/buildsystems/vcpkg.cmake -DTd_DIR:PATH=$(Resolve-Path ../td/lib/cmake/Td) ..
 cmake --build . --target install --config Release
 cd ../../..
-cd ..
-dir td/tdlib
