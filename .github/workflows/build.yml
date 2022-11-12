@@ -35,7 +35,7 @@ jobs:
       - name: Archive binary libs
         uses: actions/upload-artifact@v3
         with:
-          name: linux-bin
+          name: linux-bin-${{ github.event.inputs.deploy_version }}
           path: ${{ github.workspace }}/tdrepo/tdlib/bin/*.so
 
       - name: Set up JDK 11
@@ -91,5 +91,5 @@ jobs:
       - name: Archive binary libs
         uses: actions/upload-artifact@v3
         with:
-          name: windows-bin
+          name: windows-bin-${{ github.event.inputs.deploy_version }}
           path: ${{ github.workspace }}/tdrepo/tdlib/bin/*.dll
